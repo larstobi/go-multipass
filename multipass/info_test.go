@@ -39,7 +39,7 @@ func TestCreateInfoAndDelete(t *testing.T) {
 
 func TestParsing(t *testing.T) {
 
-	instance := parseInstance(`Name:           perennial-trogon
+	instance := parseInfo(`Name:           perennial-trogon
 State:          Running
 IPv4:           192.168.64.55
 Release:        Ubuntu 18.04.4 LTS
