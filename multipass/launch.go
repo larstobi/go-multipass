@@ -8,6 +8,15 @@ import (
 
 type LaunchReq struct {
 	Image         string
+	CPU           string
+	Disk          string
+	Name          string
+	Memory        string
+	CloudInitFile string
+}
+
+type LaunchReqV2 struct {
+	Image         string
 	CPUS          string
 	Disk          string
 	Name          string
@@ -16,30 +25,46 @@ type LaunchReq struct {
 }
 
 func Launch(launchReq *LaunchReq) (*Instance, error) {
+	instance, err := LaunchV2(&LaunchReqV2{
+		Name:          launchReq.Name,
+		Image:         launchReq.Image,
+		CPUS:          launchReq.CPU,
+		Memory:        launchReq.Memory,
+		Disk:          launchReq.Disk,
+		CloudInitFile: launchReq.CloudInitFile,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return instance, nil
+}
+
+func LaunchV2(launchReqV2 *LaunchReqV2) (*Instance, error) {
 	var args = []string{"launch"}
 
-	if launchReq.Image != "" {
-		args = append(args, launchReq.Image)
+	if launchReqV2.Image != "" {
+		args = append(args, launchReqV2.Image)
 	}
 
-	if launchReq.CPUS != "" {
-		args = append(args, "--cpus", launchReq.CPUS)
+	if launchReqV2.CPUS != "" {
+		args = append(args, "--cpus", launchReqV2.CPUS)
 	}
 
-	if launchReq.Name != "" {
-		args = append(args, "--name", launchReq.Name)
+	if launchReqV2.Name != "" {
+		args = append(args, "--name", launchReqV2.Name)
 	}
 
-	if launchReq.Disk != "" {
-		args = append(args, "--disk", launchReq.Disk)
+	if launchReqV2.Disk != "" {
+		args = append(args, "--disk", launchReqV2.Disk)
 	}
 
-	if launchReq.Memory != "" {
-		args = append(args, "--mem", launchReq.Memory)
+	if launchReqV2.Memory != "" {
+		args = append(args, "--mem", launchReqV2.Memory)
 	}
 
-	if launchReq.CloudInitFile != "" {
-		args = append(args, "--cloud-init", launchReq.CloudInitFile)
+	if launchReqV2.CloudInitFile != "" {
+		args = append(args, "--cloud-init", launchReqV2.CloudInitFile)
 	}
 
 	result := exec.Command("multipass", args...)
