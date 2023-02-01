@@ -60,7 +60,7 @@ func LaunchV2(launchReqV2 *LaunchReqV2) (*Instance, error) {
 	}
 
 	if launchReqV2.Memory != "" {
-		args = append(args, "--mem", launchReqV2.Memory)
+		args = append(args, "--memory", launchReqV2.Memory)
 	}
 
 	if launchReqV2.CloudInitFile != "" {
