@@ -60,7 +60,9 @@ func LaunchV2(launchReqV2 *LaunchReqV2) (*Instance, error) {
 	}
 
 	if launchReqV2.Memory != "" {
-		args = append(args, "--mem", launchReqV2.Memory)
+		// --mem changed to --memory in v1.11.0 and broke the interface
+		// -m works for both pre and post v1.11.0
+		args = append(args, "-m", launchReqV2.Memory)
 	}
 
 	if launchReqV2.CloudInitFile != "" {
