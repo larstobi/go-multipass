@@ -60,7 +60,12 @@ func LaunchV2(launchReqV2 *LaunchReqV2) (*Instance, error) {
 	}
 
 	if launchReqV2.Memory != "" {
-		args = append(args, "--mem", launchReqV2.Memory)
+		 // Check for mem flag deperecation (if current version is more recent than LONG_MEMORY_VERSION  then use --memory flag instead)
+		if CompareCurrentVersion(LONG_MEMORY_VERSION) < 0 {
+			args = append(args, "--mem", launchReqV2.Memory)
+		} else {
+			args = append(args, "--memory", launchReqV2.Memory)
+		}
 	}
 
 	if launchReqV2.CloudInitFile != "" {
