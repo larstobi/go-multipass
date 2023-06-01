@@ -12,7 +12,3 @@ type Instance struct {
 	MemoryTotal string
 	Load        string
 }
-
-const (
-	LONG_MEMORY_VERSION = "v1.11.0.rc"
-)
