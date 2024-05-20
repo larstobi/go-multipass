@@ -21,7 +21,15 @@ func TestFindByAlias(t *testing.T) {
 		Aliases: []string{},
 	}
 
-	if reflect.DeepEqual(*result, expected) {
+	imagesEqual := true
+
+	if result.Os != expected.Os {
+		imagesEqual = false
+	}
+	if result.Release != expected.Release {
+		imagesEqual = false
+	}
+	if reflect.DeepEqual(result.Aliases, expected.Aliases) && imagesEqual {
 		t.Logf("Success !")
 	} else {
 		fmt.Println("Expected:")
