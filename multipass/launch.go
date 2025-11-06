@@ -22,6 +22,8 @@ type LaunchReqV2 struct {
 	Name          string
 	Memory        string
 	CloudInitFile string
+	Network       []string
+	Bridged       bool
 }
 
 func Launch(launchReq *LaunchReq) (*Instance, error) {
@@ -66,6 +68,16 @@ func LaunchV2(launchReqV2 *LaunchReqV2) (*Instance, error) {
 
 	if launchReqV2.CloudInitFile != "" {
 		args = append(args, "--cloud-init", launchReqV2.CloudInitFile)
+	}
+
+	// Add network specifications
+	for _, network := range launchReqV2.Network {
+		args = append(args, "--network", network)
+	}
+
+	// Add bridged network if requested
+	if launchReqV2.Bridged {
+		args = append(args, "--bridged")
 	}
 
 	result := exec.Command("multipass", args...)
