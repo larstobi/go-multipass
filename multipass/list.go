@@ -1,38 +1,41 @@
 package multipass
 
 import (
+	"encoding/json"
 	"os/exec"
-	"strings"
 )
 
+type multipassListResponse struct {
+	List []multipassInstance `json:"list"`
+}
+
+type multipassInstance struct {
+	Name  string `json:"name"`
+	State string `json:"state"`
+	// Behold gjerne disse i JSON-strukturen, selv om Instance ikke har dem:
+	IPv4    []string `json:"ipv4"`
+	Release string   `json:"release"`
+}
+
 func List() ([]*Instance, error) {
+	cmd := exec.Command("multipass", "list", "--format", "json")
 
-	cmdFormat := "multipass list"
-
-	cmdExec := exec.Command("sh", "-c", cmdFormat)
-
-	out, err := cmdExec.Output()
+	out, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
 
-	return parseInstances(string(out))
-}
+	var resp multipassListResponse
+	if err := json.Unmarshal(out, &resp); err != nil {
+		return nil, err
+	}
 
-func parseInstances(out string) ([]*Instance, error) {
-
-	var instances []*Instance
-	allLines := strings.Split(strings.TrimSpace(out), "\n")
-
-	for _, line := range allLines {
-		space := strings.TrimSpace(strings.Split(line, " ")[0])
-		if space != "Name" {
-			instance, err := Info(&InfoRequest{Name: space})
-			if err != nil {
-				return nil, err
-			}
-			instances = append(instances, instance)
-		}
+	instances := make([]*Instance, 0, len(resp.List))
+	for _, mp := range resp.List {
+		instances = append(instances, &Instance{
+			Name:  mp.Name,
+			State: mp.State,
+		})
 	}
 
 	return instances, nil
