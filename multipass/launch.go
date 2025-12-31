@@ -14,13 +14,34 @@ type LaunchReq struct {
 	Memory        string
 	CloudInitFile string
 	CloudInitData string
+	CloudInitUrl  string
 	Network       []string
 	Bridged       bool
 }
 
 func Launch(launchReq *LaunchReq) (*Instance, error) {
+	if launchReq == nil {
+		return nil, errors.New("launchReq is nil")
+	}
 
-	var args = []string{"launch"}
+	// Enforce mutual exclusivity
+	set := 0
+	if launchReq.CloudInitFile != "" {
+		set++
+	}
+	if launchReq.CloudInitData != "" {
+		set++
+	}
+	if launchReq.CloudInitUrl != "" {
+		set++
+	}
+	if set > 1 {
+		return nil, errors.New(
+			"only one of CloudInitFile, CloudInitData, or CloudInitUrl can be set",
+		)
+	}
+
+	args := []string{"launch"}
 
 	if launchReq.Image != "" {
 		args = append(args, launchReq.Image)
@@ -42,8 +63,26 @@ func Launch(launchReq *LaunchReq) (*Instance, error) {
 		args = append(args, "-m", launchReq.Memory)
 	}
 
-	if launchReq.CloudInitFile != "" {
+	// Cloud-init handling
+	var stdin strings.Reader
+	var useStdin bool
+
+	switch {
+	case launchReq.CloudInitFile != "":
 		args = append(args, "--cloud-init", launchReq.CloudInitFile)
+
+	case launchReq.CloudInitUrl != "":
+		args = append(args, "--cloud-init", launchReq.CloudInitUrl)
+
+	case launchReq.CloudInitData != "":
+		args = append(args, "--cloud-init", "-")
+
+		data := launchReq.CloudInitData
+		if !strings.HasSuffix(data, "\n") {
+			data += "\n"
+		}
+		stdin = *strings.NewReader(data)
+		useStdin = true
 	}
 
 	// Add network specifications
@@ -56,20 +95,28 @@ func Launch(launchReq *LaunchReq) (*Instance, error) {
 		args = append(args, "--bridged")
 	}
 
-	result := exec.Command("multipass", args...)
-	out, err := result.CombinedOutput()
+	cmd := exec.Command("multipass", args...)
+	if useStdin {
+		cmd.Stdin = &stdin
+	}
+
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, errors.New(string(out) + " " + err.Error())
 	}
 
-	var b []byte
-	b = append(b, out...)
+	out2 := strings.TrimSpace(string(out))
+	lines := strings.Split(out2, "\n")
+	if len(lines) == 0 {
+		return nil, errors.New("empty multipass output")
+	}
 
-	out2 := string(b)
-
-	o := strings.Split(strings.TrimSpace(out2), "\n")[0]
-
-	name := strings.TrimSpace(strings.Split(o, "Launched: ")[1])
+	// Expect: "Launched: <name>"
+	parts := strings.Split(lines[0], "Launched: ")
+	if len(parts) < 2 {
+		return nil, errors.New("unexpected multipass output: " + out2)
+	}
+	name := strings.TrimSpace(parts[1])
 
 	instance, err := Info(&InfoRequest{Name: name})
 	if err != nil {
