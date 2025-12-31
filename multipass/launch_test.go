@@ -18,7 +18,7 @@ func TestLaunch(t *testing.T) {
 		}
 	}()
 
-	instance, err := LaunchV2(&LaunchReqV2{
+	instance, err := Launch(&LaunchReq{
 		CPUS:   "2",
 		Memory: "3G",
 		Name:   instanceName,

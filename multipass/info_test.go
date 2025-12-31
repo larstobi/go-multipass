@@ -6,7 +6,7 @@ import (
 )
 
 func TestCreateInfoAndDelete(t *testing.T) {
-	instance, err := LaunchV2(&LaunchReqV2{
+	instance, err := Launch(&LaunchReq{
 		CPUS: "2",
 		Name: "test2",
 	})
