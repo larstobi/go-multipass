@@ -104,10 +104,10 @@ func Launch(launchReq *LaunchReq) (*Instance, error) {
 	}
 
 	out2 := strings.TrimSpace(string(out))
-	lines := strings.Split(out2, "\n")
-	if len(lines) == 0 {
+	if out2 == "" {
 		return nil, errors.New("empty multipass output")
 	}
+	lines := strings.Split(out2, "\n")
 
 	// Expect: "Launched: <name>"
 	parts := strings.Split(lines[0], "Launched: ")
