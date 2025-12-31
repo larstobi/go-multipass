@@ -13,7 +13,6 @@ type LaunchReq struct {
 	Name          string
 	Memory        string
 	CloudInitFile string
-	CloudInitData string
 	Network       []string
 	Bridged       bool
 }
