@@ -46,15 +46,19 @@ func Launch(launchReq *LaunchReq) (*Instance, error) {
 	if launchReq.Image != "" {
 		args = append(args, launchReq.Image)
 	}
+
 	if launchReq.CPUS != "" {
 		args = append(args, "--cpus", launchReq.CPUS)
 	}
+
 	if launchReq.Name != "" {
 		args = append(args, "--name", launchReq.Name)
 	}
+
 	if launchReq.Disk != "" {
 		args = append(args, "--disk", launchReq.Disk)
 	}
+
 	if launchReq.Memory != "" {
 		args = append(args, "-m", launchReq.Memory)
 	}
