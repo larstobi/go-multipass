@@ -46,19 +46,15 @@ func Launch(launchReq *LaunchReq) (*Instance, error) {
 	if launchReq.Image != "" {
 		args = append(args, launchReq.Image)
 	}
-
 	if launchReq.CPUS != "" {
 		args = append(args, "--cpus", launchReq.CPUS)
 	}
-
 	if launchReq.Name != "" {
 		args = append(args, "--name", launchReq.Name)
 	}
-
 	if launchReq.Disk != "" {
 		args = append(args, "--disk", launchReq.Disk)
 	}
-
 	if launchReq.Memory != "" {
 		args = append(args, "-m", launchReq.Memory)
 	}
@@ -85,12 +81,10 @@ func Launch(launchReq *LaunchReq) (*Instance, error) {
 		useStdin = true
 	}
 
-	// Add network specifications
+	// Network specs
 	for _, network := range launchReq.Network {
 		args = append(args, "--network", network)
 	}
-
-	// Add bridged network if requested
 	if launchReq.Bridged {
 		args = append(args, "--bridged")
 	}

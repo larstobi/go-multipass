@@ -12,7 +12,7 @@ type multipassListResponse struct {
 type multipassInstance struct {
 	Name  string `json:"name"`
 	State string `json:"state"`
-	// Behold gjerne disse i JSON-strukturen, selv om Instance ikke har dem:
+	// Keep these in the JSON structure, even though Instance doesn't have them:
 	IPv4    []string `json:"ipv4"`
 	Release string   `json:"release"`
 }
