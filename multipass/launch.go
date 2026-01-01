@@ -14,7 +14,7 @@ type LaunchReq struct {
 	Memory        string
 	CloudInitFile string
 	CloudInitData string
-	CloudInitUrl  string
+	CloudInitURL  string
 	Network       []string
 	Bridged       bool
 }
@@ -32,12 +32,12 @@ func Launch(launchReq *LaunchReq) (*Instance, error) {
 	if launchReq.CloudInitData != "" {
 		set++
 	}
-	if launchReq.CloudInitUrl != "" {
+	if launchReq.CloudInitURL != "" {
 		set++
 	}
 	if set > 1 {
 		return nil, errors.New(
-			"only one of CloudInitFile, CloudInitData, or CloudInitUrl can be set",
+			"only one of CloudInitFile, CloudInitData, or CloudInitURL can be set",
 		)
 	}
 
@@ -71,8 +71,8 @@ func Launch(launchReq *LaunchReq) (*Instance, error) {
 	case launchReq.CloudInitFile != "":
 		args = append(args, "--cloud-init", launchReq.CloudInitFile)
 
-	case launchReq.CloudInitUrl != "":
-		args = append(args, "--cloud-init", launchReq.CloudInitUrl)
+	case launchReq.CloudInitURL != "":
+		args = append(args, "--cloud-init", launchReq.CloudInitURL)
 
 	case launchReq.CloudInitData != "":
 		args = append(args, "--cloud-init", "-")
