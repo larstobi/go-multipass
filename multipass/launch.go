@@ -100,7 +100,11 @@ func Launch(launchReq *LaunchReq) (*Instance, error) {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, errors.New(string(out) + " " + err.Error())
+		outStr := strings.TrimSpace(string(out))
+		if outStr != "" {
+			return nil, errors.New(outStr + ": " + err.Error())
+		}
+		return nil, errors.New(err.Error())
 	}
 
 	out2 := strings.TrimSpace(string(out))
