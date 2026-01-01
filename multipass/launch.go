@@ -110,11 +110,12 @@ func Launch(launchReq *LaunchReq) (*Instance, error) {
 	lines := strings.Split(out2, "\n")
 
 	// Expect: "Launched: <name>"
-	parts := strings.Split(lines[0], "Launched: ")
-	if len(parts) < 2 {
+	const launchedPrefix = "Launched: "
+	line := strings.TrimSpace(lines[0])
+	if !strings.HasPrefix(line, launchedPrefix) {
 		return nil, errors.New("unexpected multipass output: " + out2)
 	}
-	name := strings.TrimSpace(parts[1])
+	name := strings.TrimSpace(strings.TrimPrefix(line, launchedPrefix))
 
 	instance, err := Info(&InfoRequest{Name: name})
 	if err != nil {
