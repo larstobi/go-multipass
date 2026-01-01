@@ -64,7 +64,7 @@ func Launch(launchReq *LaunchReq) (*Instance, error) {
 	}
 
 	// Cloud-init handling
-	var stdin strings.Reader
+	var stdin *strings.Reader
 	var useStdin bool
 
 	switch {
@@ -81,7 +81,7 @@ func Launch(launchReq *LaunchReq) (*Instance, error) {
 		if !strings.HasSuffix(data, "\n") {
 			data += "\n"
 		}
-		stdin = *strings.NewReader(data)
+		stdin = strings.NewReader(data)
 		useStdin = true
 	}
 
@@ -95,7 +95,7 @@ func Launch(launchReq *LaunchReq) (*Instance, error) {
 
 	cmd := exec.Command("multipass", args...)
 	if useStdin {
-		cmd.Stdin = &stdin
+		cmd.Stdin = stdin
 	}
 
 	out, err := cmd.CombinedOutput()
