@@ -2,6 +2,7 @@ package multipass
 
 import (
 	"errors"
+	"fmt"
 	"os/exec"
 	"strings"
 )
@@ -13,13 +14,35 @@ type LaunchReq struct {
 	Name          string
 	Memory        string
 	CloudInitFile string
+	CloudInitData string
+	CloudInitURL  string
 	Network       []string
 	Bridged       bool
 }
 
 func Launch(launchReq *LaunchReq) (*Instance, error) {
+	if launchReq == nil {
+		return nil, errors.New("launchReq is nil")
+	}
 
-	var args = []string{"launch"}
+	// Enforce mutual exclusivity
+	set := 0
+	if launchReq.CloudInitFile != "" {
+		set++
+	}
+	if launchReq.CloudInitData != "" {
+		set++
+	}
+	if launchReq.CloudInitURL != "" {
+		set++
+	}
+	if set > 1 {
+		return nil, errors.New(
+			"only one of CloudInitFile, CloudInitData, or CloudInitURL can be set",
+		)
+	}
+
+	args := []string{"launch"}
 
 	if launchReq.Image != "" {
 		args = append(args, launchReq.Image)
@@ -41,39 +64,76 @@ func Launch(launchReq *LaunchReq) (*Instance, error) {
 		args = append(args, "-m", launchReq.Memory)
 	}
 
-	if launchReq.CloudInitFile != "" {
+	// Cloud-init handling
+	var stdin *strings.Reader
+	var useStdin bool
+
+	switch {
+	case launchReq.CloudInitFile != "":
 		args = append(args, "--cloud-init", launchReq.CloudInitFile)
+
+	case launchReq.CloudInitURL != "":
+		args = append(args, "--cloud-init", launchReq.CloudInitURL)
+
+	case launchReq.CloudInitData != "":
+		args = append(args, "--cloud-init", "-")
+
+		data := launchReq.CloudInitData
+		if !strings.HasSuffix(data, "\n") {
+			data += "\n"
+		}
+		stdin = strings.NewReader(data)
+		useStdin = true
 	}
 
-	// Add network specifications
+	// Network specs
 	for _, network := range launchReq.Network {
 		args = append(args, "--network", network)
 	}
-
-	// Add bridged network if requested
 	if launchReq.Bridged {
 		args = append(args, "--bridged")
 	}
 
-	result := exec.Command("multipass", args...)
-	out, err := result.CombinedOutput()
-	if err != nil {
-		return nil, errors.New(string(out) + " " + err.Error())
+	cmd := exec.Command("multipass", args...)
+	if useStdin {
+		cmd.Stdin = stdin
 	}
 
-	var b []byte
-	b = append(b, out...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		outStr := strings.TrimSpace(string(out))
+		if outStr != "" {
+			return nil, errors.New(outStr + ": " + err.Error())
+		}
+		return nil, errors.New(err.Error())
+	}
 
-	out2 := string(b)
+	fmt.Println("After CombinedOutput")
 
-	o := strings.Split(strings.TrimSpace(out2), "\n")[0]
+	out2 := strings.TrimSpace(string(out))
+	if out2 == "" {
+		return nil, errors.New("empty multipass output")
+	}
+	lines := strings.Split(out2, "\n")
 
-	name := strings.TrimSpace(strings.Split(o, "Launched: ")[1])
+	fmt.Println("After TrimSpace and Split")
+
+	// Expect: "Launched: <name>"
+	const launchedPrefix = "Launched: "
+	line := strings.TrimSpace(lines[0])
+	if !strings.HasPrefix(line, launchedPrefix) {
+		return nil, errors.New("unexpected multipass output: " + out2)
+	}
+	name := strings.TrimSpace(strings.TrimPrefix(line, launchedPrefix))
+
+	fmt.Println("After Launched Prefix")
 
 	instance, err := Info(&InfoRequest{Name: name})
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("After Info")
 
 	return instance, nil
 }
