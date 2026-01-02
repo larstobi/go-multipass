@@ -77,6 +77,7 @@ func parseInfoJSON(data []byte, name string) (*Instance, error) {
 
 	inst := &Instance{
 		Name:      name,
+		CPUS:      info.CPUCount,
 		State:     info.State,
 		Image:     info.Release,
 		ImageHash: info.ImageHash,

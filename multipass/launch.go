@@ -2,6 +2,7 @@ package multipass
 
 import (
 	"errors"
+	"fmt"
 	"os/exec"
 	"strings"
 )
@@ -107,11 +108,15 @@ func Launch(launchReq *LaunchReq) (*Instance, error) {
 		return nil, errors.New(err.Error())
 	}
 
+	fmt.Println("After CombinedOutput")
+
 	out2 := strings.TrimSpace(string(out))
 	if out2 == "" {
 		return nil, errors.New("empty multipass output")
 	}
 	lines := strings.Split(out2, "\n")
+
+	fmt.Println("After TrimSpace and Split")
 
 	// Expect: "Launched: <name>"
 	const launchedPrefix = "Launched: "
@@ -121,10 +126,14 @@ func Launch(launchReq *LaunchReq) (*Instance, error) {
 	}
 	name := strings.TrimSpace(strings.TrimPrefix(line, launchedPrefix))
 
+	fmt.Println("After Launched Prefix")
+
 	instance, err := Info(&InfoRequest{Name: name})
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("After Info")
 
 	return instance, nil
 }
