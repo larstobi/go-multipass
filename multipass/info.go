@@ -1,83 +1,106 @@
 package multipass
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"os/exec"
-	"strings"
 )
+
+/*
+Public API
+*/
 
 type InfoRequest struct {
 	Name string
 }
 
 func Info(req *InfoRequest) (*Instance, error) {
-	args := []string{"info"}
-	args = append(args, req.Name)
+	if req == nil || req.Name == "" {
+		return nil, errors.New("instance name is required")
+	}
 
-	result := exec.Command("multipass", args...)
-	out, err := result.CombinedOutput()
+	cmd := exec.Command(
+		"multipass",
+		"info",
+		req.Name,
+		"--format",
+		"json",
+	)
+
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, errors.New(string(out) + " " + err.Error())
 	}
 
-	return parseInfo(string(out)), nil
+	return parseInfoJSON(out, req.Name)
 }
 
-const (
-	Name        = "Name:"
-	State       = "State:"
-	IPv4        = "IPv4:"
-	Release     = "Release:"
-	ImageHash   = "Image hash:"
-	Load        = "Load:"
-	DiskUsage   = "Disk usage:"
-	MemoryUsage = "Memory usage:"
-)
+/*
+Internal JSON parsing
+*/
 
-func parseInfo(out string) *Instance {
+type multipassInfoResponse struct {
+	Errors []any                            `json:"errors"`
+	Info   map[string]multipassInstanceInfo `json:"info"`
+}
 
-	var instance Instance
+type multipassInstanceInfo struct {
+	CPUCount  string    `json:"cpu_count"` // i dumpen din er dette string
+	State     string    `json:"state"`
+	IPv4      []string  `json:"ipv4"`
+	Release   string    `json:"release"`
+	ImageHash string    `json:"image_hash"`
+	Load      []float64 `json:"load"`
 
-	for _, line := range strings.Split(out, "\n") {
+	Memory struct {
+		Total uint64 `json:"total"`
+		Used  uint64 `json:"used"`
+	} `json:"memory"`
 
-		if strings.Contains(line, Name) && !strings.HasSuffix(line, "--") {
-			instance.Name = strings.TrimSpace(strings.ReplaceAll(line, Name, ""))
-		}
+	Disks map[string]struct {
+		Total string `json:"total"` // i dumpen: string med bytes
+		Used  string `json:"used"`  // i dumpen: string med bytes
+	} `json:"disks"`
+}
 
-		if strings.Contains(line, State) && !strings.HasSuffix(line, "--") {
-			instance.State = strings.TrimSpace(strings.ReplaceAll(line, State, ""))
-		}
-
-		if strings.Contains(line, IPv4) && !strings.HasSuffix(line, "--") {
-			instance.IP = strings.TrimSpace(strings.ReplaceAll(line, IPv4, ""))
-		}
-
-		if strings.Contains(line, Release) && !strings.HasSuffix(line, "--") {
-			instance.Image = strings.TrimSpace(strings.ReplaceAll(line, Release, ""))
-		}
-
-		if strings.Contains(line, ImageHash) && !strings.HasSuffix(line, "--") {
-			instance.ImageHash = strings.TrimSpace(strings.ReplaceAll(line, ImageHash, ""))
-		}
-
-		if strings.Contains(line, Load) && !strings.HasSuffix(line, "--") {
-			instance.Load = strings.TrimSpace(strings.ReplaceAll(line, Load, ""))
-		}
-
-		if strings.Contains(line, DiskUsage) && !strings.HasSuffix(line, "--") {
-			diskUsage := strings.TrimSpace(strings.ReplaceAll(line, DiskUsage, ""))
-			diskUsageOut := strings.Split(diskUsage, "out of")
-			instance.DiskUsage = strings.TrimSpace(diskUsageOut[0])
-			instance.TotalDisk = strings.TrimSpace(diskUsageOut[1])
-		}
-
-		if strings.Contains(line, MemoryUsage) && !strings.HasSuffix(line, "--") {
-			memoryUsage := strings.TrimSpace(strings.ReplaceAll(line, MemoryUsage, ""))
-			memoryUsageOut := strings.Split(memoryUsage, "out of")
-			instance.MemoryUsage = strings.TrimSpace(memoryUsageOut[0])
-			instance.MemoryTotal = strings.TrimSpace(memoryUsageOut[1])
-		}
+func parseInfoJSON(data []byte, name string) (*Instance, error) {
+	var resp multipassInfoResponse
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return nil, err
 	}
 
-	return &instance
+	info, ok := resp.Info[name]
+	if !ok {
+		return nil, errors.New("instance not found in multipass output")
+	}
+
+	inst := &Instance{
+		Name:      name,
+		State:     info.State,
+		Image:     info.Release,
+		ImageHash: info.ImageHash,
+	}
+
+	if len(info.IPv4) > 0 {
+		inst.IP = info.IPv4[0]
+	}
+
+	if len(info.Load) == 3 {
+		inst.Load = fmt.Sprintf("%.2f %.2f %.2f", info.Load[0], info.Load[1], info.Load[2])
+	}
+
+	// Disk: velg første disk-entry (typisk sda1). Hvis du vil ha en bestemt disk (root),
+	// må du definere policy (f.eks. alltid "sda1" hvis finnes).
+	for _, d := range info.Disks {
+		inst.DiskUsage = d.Used
+		inst.TotalDisk = d.Total
+		break
+	}
+
+	// Memory i bytes -> lagre som bytes-string (evt. gjør humanize senere)
+	inst.MemoryUsage = fmt.Sprintf("%d", info.Memory.Used)
+	inst.MemoryTotal = fmt.Sprintf("%d", info.Memory.Total)
+
+	return inst, nil
 }
